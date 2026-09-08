@@ -1,0 +1,1 @@
+sed -i 's/val auditLogs = repository.auditLogs/val auditLogs = repository.auditLogs\n    val allTransactions = repository.getAllTransactions().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())/g' app/src/main/java/com/example/ui/viewmodel/LoyaltyViewModel.kt

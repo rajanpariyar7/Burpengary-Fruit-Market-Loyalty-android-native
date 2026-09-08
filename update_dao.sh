@@ -1,0 +1,1 @@
+sed -i 's/fun getTransactions(email: String): Flow<List<PointTransaction>>/fun getTransactions(email: String): Flow<List<PointTransaction>>\n\n    @Query("SELECT \* FROM transactions ORDER BY timestamp DESC")\n    fun getAllTransactions(): Flow<List<PointTransaction>>/g' app/src/main/java/com/example/data/local/LoyaltyDao.kt

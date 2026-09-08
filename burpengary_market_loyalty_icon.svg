@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512">
+    <!-- Background -->
+    <rect width="108" height="108" fill="#FDFBF7" />
+    
+    <g transform="scale(1.2) translate(-9, -9)">
+        <!-- Laurel / Leaf motif -->
+        <path fill="#5A8F3A" d="M 54,20 C 40,20 30,35 30,45 C 45,45 54,30 54,20 Z" />
+        <path fill="#8BC34A" d="M 54,20 C 68,20 78,35 78,45 C 63,45 54,30 54,20 Z" />
+        
+        <!-- Green Veggie / Melon -->
+        <path fill="#5A8F3A" d="M 30,55 A 14,14 0 1,1 58,55 A 14,14 0 1,1 30,55 Z" />
+        
+        <!-- Apple / Red Fruit -->
+        <path fill="#E53935" d="M 45,50 A 12,12 0 1,1 69,50 A 12,12 0 1,1 45,50 Z" />
+        
+        <!-- Orange / Citrus -->
+        <path fill="#FFA726" d="M 60,54 A 10,10 0 1,1 80,54 A 10,10 0 1,1 60,54 Z" />
+
+        <!-- Basket -->
+        <path fill="#A0522D" d="M 28,60 C 28,75 35,80 40,80 L 68,80 C 73,80 82,75 82,60 Z" />
+        <path fill="#8B4513" d="M 24,56 h 60 v 4 h -60 z" />
+    </g>
+</svg>

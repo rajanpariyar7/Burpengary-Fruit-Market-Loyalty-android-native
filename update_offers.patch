@@ -1,0 +1,11 @@
+--- app/src/main/java/com/example/AdminDashboardScreen.kt
++++ app/src/main/java/com/example/AdminDashboardScreen.kt
+@@ -86,7 +86,7 @@
+         Box(modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFFAFAFA))) {
+             when (selectedTab) {
+                 0 -> AdminStatsDashboardTab(viewModel)
+-                1 -> AdminManageTab(viewModel) // Offers manager
++                1 -> AdminOffersManagerTab(viewModel)
+                 2 -> AdminTransactionsTab(viewModel)
+                 3 -> AdminCustomersTab(viewModel)
+                 4 -> AdminSettingsTab(viewModel, currentUser?.name ?: "Admin")

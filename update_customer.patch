@@ -1,0 +1,87 @@
+--- app/src/main/java/com/example/CustomerDashboardScreen.kt
++++ app/src/main/java/com/example/CustomerDashboardScreen.kt
+@@ -16,6 +16,7 @@
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.asImageBitmap
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.text.SpanStyle
+@@ -29,6 +30,7 @@
+ import com.example.ui.theme.*
+ import com.example.ui.viewmodel.LoyaltyViewModel
+ import com.example.data.model.User
++import com.example.ui.components.generateQRCode
++import com.example.ui.components.generateBarcode
+ 
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+@@ -87,13 +89,24 @@
+                             unselectedTextColor = Color.Gray
+                         )
+                     )
+                     NavigationBarItem(
++                        selected = selectedTab == 1,
++                        onClick = { selectedTab = 1 },
++                        icon = { Icon(if (selectedTab == 1) Icons.Filled.QrCode else Icons.Outlined.QrCode, contentDescription = "ID") },
++                        label = { Text("ID", fontSize = 10.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
++                        colors = NavigationBarItemDefaults.colors(
++                            selectedIconColor = DarkGreen,
++                            selectedTextColor = DarkGreen,
++                            indicatorColor = Color.Transparent,
++                            unselectedIconColor = Color.Gray,
++                            unselectedTextColor = Color.Gray
++                        )
++                    )
++                    NavigationBarItem(
+-                        selected = selectedTab == 1,
+-                        onClick = { selectedTab = 1 },
++                        selected = selectedTab == 2,
++                        onClick = { selectedTab = 2 },
+                         icon = { Icon(if (selectedTab == 2) Icons.Filled.ShoppingBag else Icons.Outlined.ShoppingBag, contentDescription = "Categories") },
+                         label = { Text("Catalog", fontSize = 10.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
+                         colors = NavigationBarItemDefaults.colors(
+                             selectedIconColor = DarkGreen,
+                             selectedTextColor = DarkGreen,
+                             indicatorColor = Color.Transparent,
+                             unselectedIconColor = Color.Gray,
+                             unselectedTextColor = Color.Gray
+                         )
+                     )
+                     NavigationBarItem(
++                        selected = selectedTab == 3,
++                        onClick = { selectedTab = 3 },
++                        icon = { Icon(if (selectedTab == 3) Icons.Filled.History else Icons.Outlined.History, contentDescription = "History") },
++                        label = { Text("History", fontSize = 10.sp, fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Normal) },
++                        colors = NavigationBarItemDefaults.colors(
++                            selectedIconColor = DarkGreen,
++                            selectedTextColor = DarkGreen,
++                            indicatorColor = Color.Transparent,
++                            unselectedIconColor = Color.Gray,
++                            unselectedTextColor = Color.Gray
++                        )
++                    )
++                    NavigationBarItem(
+-                        selected = selectedTab == 2,
+-                        onClick = { selectedTab = 2 },
++                        selected = selectedTab == 4,
++                        onClick = { selectedTab = 4 },
+                         icon = { Icon(if (selectedTab == 4) Icons.Filled.Person else Icons.Outlined.Person, contentDescription = "Profile") },
+                         label = { Text("Profile", fontSize = 10.sp, fontWeight = if (selectedTab == 4) FontWeight.Bold else FontWeight.Normal) },
+                         colors = NavigationBarItemDefaults.colors(
+                             selectedIconColor = DarkGreen,
+@@ -118,10 +131,12 @@
+         Box(modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFF3F4F1))) {
+             when (selectedTab) {
+                 0 -> CustomerHomeTab(customer, pointSettings, offers, viewModel)
+-                1 -> CustomerCatalogTab(customer, pointSettings, offers, viewModel)
+-                2 -> ProfileTab(customer, viewModel)
++                1 -> CustomerQRTab(customer)
++                2 -> CustomerCatalogTab(customer, pointSettings, offers, viewModel)
++                3 -> CustomerHistoryTab(viewModel)
++                4 -> ProfileTab(customer, viewModel)
+             }
+         }
+     }
+ }

@@ -1,0 +1,283 @@
+--- app/src/main/java/com/example/CashierScreen.kt
++++ app/src/main/java/com/example/CashierScreen.kt
+@@ -40,6 +40,7 @@
+     var purchaseAmount by remember { mutableStateOf("") }
+     var pointsToRedeem by remember { mutableStateOf("") }
+     
++    var selectedTab by remember { mutableIntStateOf(0) }
+     val pointSettings by viewModel.pointSettings.collectAsStateWithLifecycle()
+     
+     // Live search results
+@@ -62,242 +63,267 @@
+     var isScanningMode by remember { mutableStateOf(false) }
+ 
+     Scaffold(
+-        topBar = {}
++        bottomBar = {
++            NavigationBar(containerColor = Color.White) {
++                NavigationBarItem(
++                    selected = selectedTab == 0,
++                    onClick = { selectedTab = 0 },
++                    icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan") },
++                    label = { Text("Scan") },
++                    colors = NavigationBarItemDefaults.colors(selectedIconColor = com.example.ui.theme.PrimaryGreen)
++                )
++                NavigationBarItem(
++                    selected = selectedTab == 1,
++                    onClick = { selectedTab = 1 },
++                    icon = { Icon(Icons.Default.History, contentDescription = "History") },
++                    label = { Text("History") },
++                    colors = NavigationBarItemDefaults.colors(selectedIconColor = com.example.ui.theme.PrimaryGreen)
++                )
++            }
++        }
+     ) { padding ->
+-        Column(modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFFAFAFA))) {
+-            
+-            // Mode Toggle
+-            if (selectedCustomer == null) {
+-                TabRow(selectedTabIndex = if (isScanningMode) 1 else 0, containerColor = Color.White) {
+-                    Tab(
+-                        selected = !isScanningMode,
+-                        onClick = { isScanningMode = false },
+-                        text = { Text("Search Customer", fontWeight = FontWeight.Bold) }
+-                    )
+-                    Tab(
+-                        selected = isScanningMode,
+-                        onClick = { 
+-                            if (!cameraPermissionState.status.isGranted) {
+-                                cameraPermissionState.launchPermissionRequest()
+-                            }
+-                            isScanningMode = true
+-                        },
+-                        text = { Text("Scan QR / Barcode", fontWeight = FontWeight.Bold) }
+-                    )
+-                }
+-            }
+-
+-            if (selectedCustomer == null) {
+-                if (isScanningMode) {
+-                    if (cameraPermissionState.status.isGranted) {
+-                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+-                            ScannerCameraPreview(onBarcodeScanned = { barcode ->
+-                                searchQuery = barcode
+-                                isScanningMode = false
+-                            })
+-                            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f))) {
+-                                Box(
+-                                    modifier = Modifier.align(Alignment.Center).size(250.dp).background(Color.Transparent, RoundedCornerShape(16.dp)).padding(2.dp),
+-                                    contentAlignment = Alignment.Center
+-                                ) {
+-                                    Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent, shape = RoundedCornerShape(16.dp), border = androidx.compose.foundation.BorderStroke(4.dp, Color.Green)) {}
+-                                }
+-                            }
+-                        }
+-                    } else {
+-                        Column(modifier = Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+-                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+-                            Spacer(modifier = Modifier.height(16.dp))
+-                            Text("Camera permission is required to scan.", color = Color.Gray)
+-                            Spacer(modifier = Modifier.height(16.dp))
+-                            Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
+-                                Text("Grant Permission")
+-                            }
+-                        }
+-                    }
+-                } else {
+-                    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+-                        OutlinedTextField(
+-                            value = searchQuery,
+-                            onValueChange = { searchQuery = it },
+-                            label = { Text("Search by Name, Phone, Email, or ID") },
+-                            modifier = Modifier.fillMaxWidth(),
+-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+-                            singleLine = true
+-                        )
+-                        Spacer(modifier = Modifier.height(16.dp))
+-                        
+-                        LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+-                            items(searchResults) { user ->
+-                                Card(
+-                                    modifier = Modifier.fillMaxWidth().clickable {
+-                                        selectedCustomer = user
+-                                        searchQuery = ""
+-                                    },
+-                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray)
+-                                ) {
+-                                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+-                                        Icon(Icons.Default.Person, contentDescription = null, tint = com.example.ui.theme.PrimaryGreen)
+-                                        Spacer(modifier = Modifier.width(16.dp))
+-                                        Column {
+-                                            Text(user.name, fontWeight = FontWeight.Bold)
+-                                            Text(user.email, fontSize = 12.sp, color = Color.Gray)
+-                                        }
+-                                    }
+-                                }
+-                            }
+-                        }
+-                    }
+-                }
+-            } else {
+-                // Customer Selected View
+-                val customer = selectedCustomer!!
+-                val focusRequester = remember { FocusRequester() }
+-                
+-                Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+-                    Row(verticalAlignment = Alignment.CenterVertically) {
+-                        IconButton(onClick = { 
+-                            selectedCustomer = null 
+-                            purchaseAmount = ""
+-                        }) {
+-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+-                        }
+-                        Spacer(modifier = Modifier.width(8.dp))
+-                        Text("Customer Profile", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+-                    }
+-                    
+-                    Spacer(modifier = Modifier.height(16.dp))
+-                    
+-                    Card(
+-                        modifier = Modifier.fillMaxWidth(),
+-                        colors = CardDefaults.cardColors(containerColor = com.example.ui.theme.PrimaryGreen),
+-                        shape = RoundedCornerShape(16.dp)
+-                    ) {
+-                        Column(modifier = Modifier.padding(20.dp)) {
+-                            Text(customer.name, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+-                            Text(customer.email, fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+-                            Spacer(modifier = Modifier.height(16.dp))
+-                            Text("Current Balance", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+-                            Text("${customer.points} pts", fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+-                        }
+-                    }
+-                    
+-                    Spacer(modifier = Modifier.height(24.dp))
+-                    
+-                    Text("Add Points (Purchase)", fontWeight = FontWeight.Bold, color = com.example.ui.theme.ExtraDarkGreen)
+-                    Spacer(modifier = Modifier.height(8.dp))
+-                    
+-                    OutlinedTextField(
+-                        value = purchaseAmount,
+-                        onValueChange = { purchaseAmount = it },
+-                        label = { Text("Purchase Amount ($)") },
+-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+-                        leadingIcon = { Icon(Icons.Default.AttachMoney, contentDescription = null) },
+-                        singleLine = true
+-                    )
+-                    
+-                    LaunchedEffect(Unit) {
+-                        delay(100)
+-                        focusRequester.requestFocus()
+-                    }
+-                    
+-                    val amountDouble = purchaseAmount.toDoubleOrNull() ?: 0.0
+-                    val pointsToEarn = (amountDouble * (pointSettings?.pointsPerDollar ?: 10)).toInt()
+-                    
+-                    if (amountDouble > 0) {
+-                        Text("+ $pointsToEarn points", color = com.example.ui.theme.PrimaryGreen, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+-                    }
+-                    
+-                    Spacer(modifier = Modifier.height(16.dp))
+-                    
+-                    Button(
+-                        onClick = {
+-                            if (amountDouble > 0) {
+-                                viewModel.processPurchase(customer.email, amountDouble)
+-                                purchaseAmount = ""
+-                                selectedCustomer = null
+-                            }
+-                        },
+-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+-                        enabled = amountDouble > 0,
+-                        colors = ButtonDefaults.buttonColors(containerColor = com.example.ui.theme.PrimaryGreen)
+-                    ) {
+-                        Text("Confirm Purchase & Add Points")
+-                    }
+-                    
+-                    Spacer(modifier = Modifier.height(32.dp))
+-                    
+-                    Divider()
+-                    Spacer(modifier = Modifier.height(16.dp))
+-                    
+-                    Text("Redeem Points", fontWeight = FontWeight.Bold, color = com.example.ui.theme.ExtraDarkGreen)
+-                    Spacer(modifier = Modifier.height(8.dp))
+-                    
+-                    val threshold = pointSettings?.redemptionThreshold ?: 100
+-                    
+-                    if (customer.points >= threshold) {
+-                        Card(
+-                            modifier = Modifier.fillMaxWidth(),
+-                            colors = CardDefaults.cardColors(containerColor = com.example.ui.theme.LightGreenCard),
+-                            border = androidx.compose.foundation.BorderStroke(1.dp, com.example.ui.theme.PrimaryGreen)
+-                        ) {
+-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+-                                Icon(Icons.Default.CardGiftcard, contentDescription = null, tint = com.example.ui.theme.PrimaryGreen)
+-                                Spacer(modifier = Modifier.width(16.dp))
+-                                Column(modifier = Modifier.weight(1f)) {
+-                                    Text("Eligible for Reward!", fontWeight = FontWeight.Bold, color = com.example.ui.theme.DarkGreen)
+-                                    Text("Customer has enough points.", fontSize = 12.sp, color = com.example.ui.theme.PrimaryGreen)
+-                                }
+-                            }
+-                        }
+-                        Spacer(modifier = Modifier.height(16.dp))
+-                        OutlinedTextField(
+-                            value = pointsToRedeem,
+-                            onValueChange = { pointsToRedeem = it },
+-                            label = { Text("Points to Redeem (Min $threshold)") },
+-                            modifier = Modifier.fillMaxWidth(),
+-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+-                        )
+-                        Spacer(modifier = Modifier.height(16.dp))
+-                        Button(
+-                            onClick = {
+-                                val pts = pointsToRedeem.toIntOrNull() ?: 0
+-                                if (pts >= threshold && pts <= customer.points) {
+-                                    viewModel.redeemPointsCashier(customer.email, pts)
+-                                    pointsToRedeem = ""
+-                                    selectedCustomer = null
+-                                }
+-                            },
+-                            modifier = Modifier.fillMaxWidth().height(50.dp),
+-                            colors = ButtonDefaults.buttonColors(containerColor = com.example.ui.theme.AccentOrange)
+-                        ) {
+-                            Text("Apply Discount & Deduct Points")
+-                        }
+-                    } else {
+-                        Card(
+-                            modifier = Modifier.fillMaxWidth(),
+-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+-                        ) {
+-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+-                                Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray)
+-                                Spacer(modifier = Modifier.width(16.dp))
+-                                Text("Not eligible. Requires $threshold points.", color = Color.Gray)
+-                            }
+-                        }
+-                    }
+-                }
+-            }
++        Box(modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFFAFAFA))) {
++            if (selectedTab == 0) {
++                CashierScanTab(
++                    viewModel = viewModel,
++                    searchQuery = searchQuery,
++                    onSearchQueryChange = { searchQuery = it },
++                    selectedCustomer = selectedCustomer,
++                    onCustomerSelected = { selectedCustomer = it },
++                    purchaseAmount = purchaseAmount,
++                    onPurchaseAmountChange = { purchaseAmount = it },
++                    pointsToRedeem = pointsToRedeem,
++                    onPointsToRedeemChange = { pointsToRedeem = it },
++                    pointSettings = pointSettings,
++                    searchResults = searchResults,
++                    cameraPermissionState = cameraPermissionState,
++                    isScanningMode = isScanningMode,
++                    onScanningModeChange = { isScanningMode = it }
++                )
++            } else {
++                CashierHistoryTab(viewModel = viewModel)
++            }
+         }
+     }
+ }

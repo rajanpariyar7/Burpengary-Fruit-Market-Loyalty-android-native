@@ -1,0 +1,42 @@
+--- app/src/main/java/com/example/AdminDashboardScreen.kt
++++ app/src/main/java/com/example/AdminDashboardScreen.kt
+@@ -481,21 +481,35 @@
+ fun AdminTransactionsTab(viewModel: LoyaltyViewModel) {
+     val transactions by viewModel.allTransactions.collectAsStateWithLifecycle()
+     val dateFormat = java.text.SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault())
+ 
+     var filterQuery by remember { mutableStateOf("") }
+-    val filteredTx = if (filterQuery.isBlank()) transactions else transactions.filter {
++    var selectedSection by remember { mutableIntStateOf(0) }
++    
++    val sectionTx = when (selectedSection) {
++        1 -> transactions.filter { it.pointChange > 0 }
++        2 -> transactions.filter { it.pointChange < 0 }
++        else -> transactions
++    }
++    
++    val filteredTx = if (filterQuery.isBlank()) sectionTx else sectionTx.filter {
+         it.description.contains(filterQuery, ignoreCase = true) || it.userEmail.contains(filterQuery, ignoreCase = true)
+     }
+ 
+     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+         Text("Point Transactions", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = com.example.ui.theme.ExtraDarkGreen)
+-        Text("Track points added and redeemed by cashiers.", color = Color.Gray, fontSize = 14.sp)
++        Text("Detailed report of points added and redeemed by cashiers.", color = Color.Gray, fontSize = 14.sp)
+         Spacer(modifier = Modifier.height(16.dp))
+         
++        TabRow(selectedTabIndex = selectedSection, containerColor = Color.Transparent, contentColor = com.example.ui.theme.PrimaryGreen) {
++            Tab(selected = selectedSection == 0, onClick = { selectedSection = 0 }, text = { Text("All", fontWeight = FontWeight.Bold) })
++            Tab(selected = selectedSection == 1, onClick = { selectedSection = 1 }, text = { Text("Points Added", fontWeight = FontWeight.Bold) })
++            Tab(selected = selectedSection == 2, onClick = { selectedSection = 2 }, text = { Text("Points Redeemed", fontWeight = FontWeight.Bold) })
++        }
++        Spacer(modifier = Modifier.height(16.dp))
++
+         OutlinedTextField(
+             value = filterQuery,
+             onValueChange = { filterQuery = it },
+-            label = { Text("Search by user, cashier, or description") },
++            label = { Text("Search cashier email or description") },
+             modifier = Modifier.fillMaxWidth(),
+             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+         )

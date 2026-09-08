@@ -1,0 +1,1 @@
+sed -i 's/2 -> AdminSettingsTab(viewModel, currentUser?.name ?: "Admin")/2 -> AdminTransactionsTab(viewModel)\n                3 -> AdminSettingsTab(viewModel, currentUser?.name ?: "Admin")/g' app/src/main/java/com/example/AdminDashboardScreen.kt

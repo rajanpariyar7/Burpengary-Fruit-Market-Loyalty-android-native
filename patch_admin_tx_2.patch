@@ -1,0 +1,35 @@
+--- app/src/main/java/com/example/AdminDashboardScreen.kt
++++ app/src/main/java/com/example/AdminDashboardScreen.kt
+@@ -522,6 +522,17 @@
+             verticalArrangement = Arrangement.spacedBy(8.dp)
+         ) {
+             items(filteredTx) { tx ->
++                // Extract cashier email if present in description
++                val cashierEmailStr = if (tx.description.contains("by cashier", ignoreCase = true)) {
++                    tx.description.substringAfterLast("by cashier").trim()
++                } else if (tx.description.contains("Redemption by", ignoreCase = true)) {
++                    tx.description.substringAfterLast("Redemption by").trim()
++                } else {
++                    ""
++                }
++                val mainDesc = if (cashierEmailStr.isNotEmpty()) {
++                    tx.description.substringBefore(" by cashier").substringBefore(" by")
++                } else { tx.description }
++
+                 Card(
+                     modifier = Modifier.fillMaxWidth(),
+                     shape = RoundedCornerShape(12.dp),
+@@ -543,8 +554,12 @@
+                         }
+                         Spacer(modifier = Modifier.width(16.dp))
+                         Column(modifier = Modifier.weight(1f)) {
+-                            Text(tx.description, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = com.example.ui.theme.DarkGreen)
+-                            Text(tx.userEmail, fontSize = 12.sp, color = Color.Gray)
++                            Text(mainDesc, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = com.example.ui.theme.DarkGreen)
++                            Text("Customer: ${tx.userEmail}", fontSize = 12.sp, color = Color.Gray)
++                            if (cashierEmailStr.isNotEmpty()) {
++                                Text("Cashier: $cashierEmailStr", fontSize = 12.sp, color = com.example.ui.theme.PrimaryGreen)
++                            }
+                         }
+                         Column(horizontalAlignment = Alignment.End) {
+                             Text(

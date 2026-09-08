@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background cream -->
+    <path android:fillColor="#F1F3E6" android:pathData="M 0,0 h 108 v 108 h -108 z"/>
+    
+    <!-- Outer Green Circle -->
+    <path android:strokeColor="#3D6D36" android:strokeWidth="2.5" android:pathData="M 54,6 A 48,48 0 1,1 53.9,6 Z" />
+    
+    <!-- Inner Green Circle -->
+    <path android:strokeColor="#3D6D36" android:strokeWidth="0.5" android:pathData="M 54,11 A 43,43 0 1,1 53.9,11 Z" />
+
+    <!-- Left Hand/Leaf -->
+    <path android:fillColor="#3D6D36" android:pathData="M 28,64 C 20,54 20,40 28,28 C 30,26 31,25 31,25 C 29,27 28,29 29,31 C 31,29 33,28 33,28 C 31,30 30,32 31,34 C 33,33 35,32 35,32 C 32,35 30,40 31,45 C 31,52 28,58 28,64 Z" />
+    
+    <!-- Right Hand/Leaf -->
+    <path android:fillColor="#3D6D36" android:pathData="M 80,64 C 88,54 88,40 80,28 C 78,26 77,25 77,25 C 79,27 80,29 79,31 C 77,29 75,28 75,28 C 77,30 78,32 77,34 C 75,33 73,32 73,32 C 76,35 78,40 77,45 C 77,52 80,58 80,64 Z" />
+
+    <!-- Crossed Poles -->
+    <path android:strokeColor="#3E6F37" android:strokeWidth="1.5" android:pathData="M 46,30 L 63,18" />
+    <path android:strokeColor="#3E6F37" android:strokeWidth="1.5" android:pathData="M 62,30 L 45,18" />
+
+    <!-- Red Flag (Left) -->
+    <path android:fillColor="#CB3330" android:pathData="M 51,18 L 40,18 L 44,21 L 40,24 L 47,24 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 49.5,21 A 1,1 0 1,1 49.4,21 Z" />
+
+    <!-- Blue Flag (Right) -->
+    <path android:fillColor="#1F4689" android:pathData="M 57,18 L 68,18 L 64,21 L 68,24 L 61,24 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 58.5,21 A 1,1 0 1,1 58.4,21 Z" />
+
+    <!-- Basket Handle -->
+    <path android:strokeColor="#6A4323" android:strokeWidth="2.5" android:pathData="M 42,42 C 42,28 66,28 66,42" />
+
+    <!-- Apple -->
+    <path android:fillColor="#DB3231" android:pathData="M 48,27 C 35,27 35,42 48,42 C 61,42 61,27 48,27 Z" />
+    <!-- Apple Stem -->
+    <path android:strokeColor="#3E6F37" android:strokeWidth="2" android:strokeLineCap="round" android:pathData="M 48,27 C 49,24 53,23 55,23" />
+
+    <!-- Left Orange -->
+    <path android:fillColor="#F5921E" android:pathData="M 40,36 A 8,8 0 1,1 39.9,36 Z" />
+    
+    <!-- Right Orange -->
+    <path android:fillColor="#F5921E" android:pathData="M 64,36 A 8,8 0 1,1 63.9,36 Z" />
+
+    <!-- Banana -->
+    <path android:fillColor="#F7CA23" android:pathData="M 55,30 C 60,32 65,37 66,42 C 62,40 57,36 53,32 Z" />
+
+    <!-- Grapes -->
+    <path android:fillColor="#7A519E" android:pathData="M 45,41 A 2.5,2.5 0 1,1 44.9,41 Z" />
+    <path android:fillColor="#7A519E" android:pathData="M 49,41 A 2.5,2.5 0 1,1 48.9,41 Z" />
+    <path android:fillColor="#7A519E" android:pathData="M 53,40 A 2.5,2.5 0 1,1 52.9,40 Z" />
+    <path android:fillColor="#7A519E" android:pathData="M 47,44 A 2.5,2.5 0 1,1 46.9,44 Z" />
+    <path android:fillColor="#7A519E" android:pathData="M 51,44 A 2.5,2.5 0 1,1 50.9,44 Z" />
+
+    <!-- Basket Body -->
+    <path android:fillColor="#6A4323" android:pathData="M 37,42 L 71,42 L 67,68 L 41,68 Z" />
+
+    <!-- Vertical Weaves -->
+    <path android:fillColor="#D4A260" android:pathData="M 42,42 L 44,68 L 46,68 L 44,42 Z" />
+    <path android:fillColor="#D4A260" android:pathData="M 48,42 L 49,69 L 51,69 L 50,42 Z" />
+    <path android:fillColor="#D4A260" android:pathData="M 54,42 L 54,70 L 56,70 L 56,42 Z" />
+    <path android:fillColor="#D4A260" android:pathData="M 60,42 L 59,69 L 57,69 L 58,42 Z" />
+    <path android:fillColor="#D4A260" android:pathData="M 66,42 L 64,68 L 62,68 L 64,42 Z" />
+
+    <!-- Horizontal Weaves -->
+    <path android:fillColor="#B07C3D" android:pathData="M 38,47 L 70,47 L 69,49 L 39,49 Z" />
+    <path android:fillColor="#B07C3D" android:pathData="M 39,53 L 69,53 L 68,55 L 40,55 Z" />
+    <path android:fillColor="#B07C3D" android:pathData="M 40,59 L 68,59 L 67,61 L 41,61 Z" />
+    <path android:fillColor="#B07C3D" android:pathData="M 41,65 L 67,65 L 66,67 L 42,67 Z" />
+
+    <!-- Basket Rim -->
+    <path android:strokeColor="#6A4323" android:strokeWidth="2.5" android:strokeLineCap="round" android:pathData="M 36,42 C 48,45 60,45 72,42" />
+
+</vector>

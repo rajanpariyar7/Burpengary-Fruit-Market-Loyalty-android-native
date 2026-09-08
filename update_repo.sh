@@ -1,0 +1,1 @@
+sed -i 's/fun getTransactions(email: String): Flow<List<PointTransaction>> = dao.getTransactions(email)/fun getTransactions(email: String): Flow<List<PointTransaction>> = dao.getTransactions(email)\n    fun getAllTransactions(): Flow<List<PointTransaction>> = dao.getAllTransactions()/g' app/src/main/java/com/example/data/repository/LoyaltyRepository.kt

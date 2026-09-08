@@ -1,0 +1,6 @@
+{
+  "name": "Burpengary Market Loyalty",
+  "description": "Loyalty app for customers to earn points and redeem rewards at Burpengary Market, featuring a digital punch card.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

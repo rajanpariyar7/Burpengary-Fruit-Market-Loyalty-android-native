@@ -1,0 +1,1 @@
+sed -i 's/val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()/val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle(emptyList())/g' app/src/main/java/com/example/SuperAdminDashboardScreen.kt
