@@ -1,140 +1,260 @@
 package com.example.data.repository
 
-import com.example.data.local.LoyaltyDao
 import com.example.data.model.*
+import com.google.firebase.FirebaseApp
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
-class LoyaltyRepository(private val dao: LoyaltyDao) {
-    val rewards: Flow<List<Reward>> = dao.getRewards()
-    val offers: Flow<List<Offer>> = dao.getOffers()
-    val pointSettings: Flow<PointSettings?> = dao.getPointSettings()
-    val allUsers: Flow<List<User>> = dao.getAllUsers()
-    val auditLogs: Flow<List<AuditLog>> = dao.getAuditLogs()
-    val categories: Flow<List<com.example.data.model.Category>> = dao.getCategories()
+class LoyaltyRepository {
+    private val db = FirebaseFirestore.getInstance(FirebaseApp.getInstance(), "burpengary-fruit-market-loyalty-database")
+
+    val rewards: Flow<List<Reward>> = callbackFlow {
+        val listener = db.collection("rewards").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                trySend(snapshot.toObjects(Reward::class.java))
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    val offers: Flow<List<Offer>> = callbackFlow {
+        val listener = db.collection("offers").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                trySend(snapshot.toObjects(Offer::class.java))
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    val pointSettings: Flow<PointSettings?> = callbackFlow {
+        val listener = db.collection("settings").document("main").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null && snapshot.exists()) {
+                trySend(snapshot.toObject(PointSettings::class.java))
+            } else {
+                trySend(null)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    val allUsers: Flow<List<User>> = callbackFlow {
+        val listener = db.collection("users").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                trySend(snapshot.toObjects(User::class.java))
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    val auditLogs: Flow<List<AuditLog>> = callbackFlow {
+        val listener = db.collection("auditLogs").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                trySend(snapshot.toObjects(AuditLog::class.java))
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    val categories: Flow<List<Category>> = callbackFlow {
+        val listener = db.collection("categories").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                trySend(snapshot.toObjects(Category::class.java))
+            }
+        }
+        awaitClose { listener.remove() }
+    }
 
     suspend fun insertCategory(name: String) {
-        dao.insertCategory(com.example.data.model.Category(name = name))
+        val id = UUID.randomUUID().toString()
+        db.collection("categories").document(id).set(Category(id, name)).await()
     }
-    suspend fun deleteCategory(category: com.example.data.model.Category) = dao.deleteCategory(category)
-    suspend fun deleteOffer(offer: com.example.data.model.Offer) = dao.deleteOffer(offer)
 
-    fun searchUsers(query: String): Flow<List<User>> = dao.searchUsers(query)
-    fun getUser(email: String): Flow<User?> = dao.getUser(email)
-    suspend fun getUserSync(email: String): User? = dao.getUserSync(email)
-    suspend fun getCustomerCount(): Int = dao.getCustomerCount()
-    
-    fun getAllCustomers(): Flow<List<User>> = dao.getAllCustomers()
-    fun getTransactions(email: String): Flow<List<PointTransaction>> = dao.getTransactions(email)
-    fun getAllTransactions(): Flow<List<PointTransaction>> = dao.getAllTransactions()
-    
+    suspend fun deleteCategory(category: Category) {
+        db.collection("categories").document(category.id).delete().await()
+    }
+
+    suspend fun deleteOffer(offer: Offer) {
+        db.collection("offers").document(offer.id).delete().await()
+    }
+
+    fun searchUsers(query: String): Flow<List<User>> = callbackFlow {
+        val listener = db.collection("users").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                val all = snapshot.toObjects(User::class.java)
+                val filtered = if (query.isBlank()) all else all.filter {
+                    it.name.contains(query, ignoreCase = true) || 
+                    it.email.contains(query, ignoreCase = true) || 
+                    it.phone.contains(query, ignoreCase = true)
+                }
+                trySend(filtered)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    fun getUser(email: String): Flow<User?> = callbackFlow {
+        if (email.isBlank()) {
+            trySend(null)
+            return@callbackFlow
+        }
+        val listener = db.collection("users").document(email).addSnapshotListener { snapshot, _ ->
+            if (snapshot != null && snapshot.exists()) {
+                trySend(snapshot.toObject(User::class.java))
+            } else {
+                trySend(null)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun getUserSync(email: String): User? {
+        if (email.isBlank()) return null
+        return try {
+            val doc = db.collection("users").document(email).get().await()
+            if (doc.exists()) doc.toObject(User::class.java) else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getCustomerCount(): Int {
+        val snapshot = db.collection("users").whereEqualTo("role", Role.CUSTOMER.name).get().await()
+        return snapshot.size()
+    }
+
+    fun getAllCustomers(): Flow<List<User>> = callbackFlow {
+        val listener = db.collection("users").whereEqualTo("role", Role.CUSTOMER.name).addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                trySend(snapshot.toObjects(User::class.java))
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    fun getTransactions(email: String): Flow<List<PointTransaction>> = callbackFlow {
+        if (email.isBlank()) {
+            trySend(emptyList())
+            return@callbackFlow
+        }
+        val listener = db.collection("transactions")
+            .whereEqualTo("userEmail", email)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    trySend(snapshot.toObjects(PointTransaction::class.java))
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    fun getAllTransactions(): Flow<List<PointTransaction>> = callbackFlow {
+        val listener = db.collection("transactions").orderBy("timestamp", Query.Direction.DESCENDING).addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                trySend(snapshot.toObjects(PointTransaction::class.java))
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
     suspend fun insertTransaction(transaction: PointTransaction) {
-        dao.insertTransaction(transaction)
+        val id = UUID.randomUUID().toString()
+        val toInsert = transaction.copy(id = id)
+        db.collection("transactions").document(id).set(toInsert).await()
     }
 
     suspend fun logAudit(action: String, byEmail: String) {
-        dao.insertAuditLog(AuditLog(action = action, changedBy = byEmail))
+        val id = UUID.randomUUID().toString()
+        val log = AuditLog(id = id, action = action, changedBy = byEmail, timestamp = System.currentTimeMillis())
+        db.collection("auditLogs").document(id).set(log).await()
     }
 
     suspend fun initializeDb() {
-        if (dao.getPointSettings().firstOrNull() == null) {
-            dao.insertPointSettings(PointSettings())
+        try {
+            val settings = db.collection("settings").document("main").get().await()
+            if (!settings.exists()) {
+                db.collection("settings").document("main").set(PointSettings()).await()
+            }
+            
+            val admin = getUserSync("admin@example.com")
+            if (admin == null) {
+                createUser(User(
+                    email = "admin@example.com",
+                    name = "Store Manager",
+                    role = Role.ADMIN
+                ))
+                createUser(User(
+                    email = "cashier@example.com",
+                    name = "Market Cashier",
+                    role = Role.CASHIER
+                ))
+                
+                insertReward(Reward(title = "Free Coffee", description = "Get a free medium coffee at the market cafe.", costInStamps = 10))
+                insertReward(Reward(title = "$5 Off Produce", description = "Get $5 off your next fresh produce purchase.", costInPoints = 500))
+                
+                addOffer(Offer(title = "Fresh Strawberries", price = "$1.99", category = "FRUITS", description = "OFFER: Amazing value! $1.99 per punnet!", imageUrl = null))
+                
+                insertTransaction(PointTransaction(userEmail = "customer@example.com", description = "Purchase: $5.0 by cashier cashier@example.com", pointChange = 50))
+            }
+        } catch (e: Exception) {
+            // Silently fail if Firebase rules block initialization before the user is authenticated.
         }
-        if (dao.getUserSync("rajanpariyar.com.np@gmail.com") == null) {
-            dao.insertUser(User(
-                email = "rajanpariyar.com.np@gmail.com",
-                passwordHash = "Burp@login4testbyGoogle@26",
-                name = "Super Admin",
-                role = Role.SUPER_ADMIN
-            ))
-            
-            dao.insertUser(User(
-                email = "admin@example.com",
-                passwordHash = "password",
-                name = "Store Manager",
-                role = Role.ADMIN
-            ))
-            
-            dao.insertUser(User(
-                email = "customer@example.com",
-                passwordHash = "password",
-                name = "Customer One",
-                role = Role.CUSTOMER,
-                points = 100,
-                stamps = 2
-            ))
-            
-            dao.insertUser(User(
-                email = "cashier@example.com",
-                passwordHash = "password",
-                name = "Market Cashier",
-                role = Role.CASHIER
-            ))
+    }
 
-            dao.insertRewards(
-                listOf(
-                    Reward(title = "Free Coffee", description = "Get a free medium coffee at the market cafe.", costInStamps = 10),
-                    Reward(title = "$5 Off Produce", description = "Get $5 off your next fresh produce purchase.", costInPoints = 500),
-                    Reward(title = "Reusable Tote Bag", description = "Redeem for a Burpengary Market canvas tote bag.", costInPoints = 1000)
-                )
-            )
-            
-            dao.insertOffer(Offer(title = "Fresh Strawberries", price = "$1.99", category = "FRUITS", description = "OFFER: Amazing value! $1.99 per punnet!", imageUrl = null))
-            dao.insertOffer(Offer(title = "Local Cavendish Bananas", price = "$1.49", category = "FRUITS", description = "Fresh locally sourced bananas.", imageUrl = null))
-            dao.insertOffer(Offer(title = "Free Range Eggs 12pk", price = "$4.99", category = "GROCERY", description = "Locally sourced.", imageUrl = null))
-            
-            // Add some mock transactions for customer
-            dao.insertTransaction(PointTransaction(userEmail = "customer@example.com", description = "Purchase: $5.0 by cashier cashier@example.com", pointChange = 50))
-            dao.insertTransaction(PointTransaction(userEmail = "customer@example.com", description = "Register Redemption by cashier@example.com", pointChange = -20))
-        }
-    }
-    
     suspend fun createUser(user: User) {
-        dao.insertUser(user)
+        db.collection("users").document(user.email).set(user).await()
     }
-    
+
     suspend fun updateUser(user: User) {
-        dao.insertUser(user)
+        db.collection("users").document(user.email).set(user).await()
     }
 
     suspend fun addStamp(email: String) {
-        val current = dao.getUserSync(email) ?: return
-        val newStamps = current.stamps + 1
-        val newLifetime = current.lifetimeStamps + 1
-        dao.updateUser(current.copy(stamps = newStamps, lifetimeStamps = newLifetime))
+        val current = getUserSync(email) ?: return
+        updateUser(current.copy(stamps = current.stamps + 1, lifetimeStamps = current.lifetimeStamps + 1))
     }
 
     suspend fun resetStamps(email: String) {
-        val current = dao.getUserSync(email) ?: return
-        dao.updateUser(current.copy(stamps = 0))
+        val current = getUserSync(email) ?: return
+        updateUser(current.copy(stamps = 0))
     }
 
     suspend fun addPoints(email: String, points: Int) {
-        val current = dao.getUserSync(email) ?: return
-        dao.updateUser(current.copy(points = current.points + points))
+        val current = getUserSync(email) ?: return
+        updateUser(current.copy(points = current.points + points))
     }
-    
+
     suspend fun addOffer(offer: Offer) {
-        dao.insertOffer(offer)
+        val id = UUID.randomUUID().toString()
+        db.collection("offers").document(id).set(offer.copy(id = id)).await()
+    }
+
+    suspend fun insertReward(reward: Reward) {
+        val id = UUID.randomUUID().toString()
+        db.collection("rewards").document(id).set(reward.copy(id = id)).await()
     }
 
     suspend fun redeemReward(email: String, reward: Reward) {
-        val current = dao.getUserSync(email) ?: return
+        val current = getUserSync(email) ?: return
         if (reward.costInStamps > 0 && current.stamps >= reward.costInStamps) {
-            dao.updateUser(current.copy(stamps = current.stamps - reward.costInStamps))
+            updateUser(current.copy(stamps = current.stamps - reward.costInStamps))
         } else if (reward.costInPoints > 0 && current.points >= reward.costInPoints) {
-            dao.updateUser(current.copy(points = current.points - reward.costInPoints))
+            updateUser(current.copy(points = current.points - reward.costInPoints))
         }
     }
-    
+
     suspend fun redeemPoints(email: String, pointsToDeduct: Int) {
-        val current = dao.getUserSync(email) ?: return
+        val current = getUserSync(email) ?: return
         if (current.points >= pointsToDeduct) { 
-            dao.updateUser(current.copy(points = current.points - pointsToDeduct))
+            updateUser(current.copy(points = current.points - pointsToDeduct))
         }
     }
-    
+
     suspend fun updateSettings(settings: PointSettings) {
-        dao.insertPointSettings(settings)
+        db.collection("settings").document("main").set(settings).await()
     }
 }

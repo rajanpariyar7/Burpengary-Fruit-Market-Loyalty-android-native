@@ -37,6 +37,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.LoyaltyViewModel
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -178,9 +184,34 @@ fun AppRouter(viewModel: LoyaltyViewModel, modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize()) {
         if (currentUser == null) {
             var isLoginScreen by remember { mutableStateOf(true) }
+            val scope = rememberCoroutineScope()
+            val ctx = androidx.compose.ui.platform.LocalContext.current
             if (isLoginScreen) {
                 LoginScreen(
                     onLogin = { email, password -> viewModel.login(email, password) },
+                    onGoogleSignInClick = {
+                        scope.launch {
+                            try {
+                                val credentialManager = CredentialManager.create(ctx)
+                                val googleIdOption = GetGoogleIdOption.Builder()
+                                    .setFilterByAuthorizedAccounts(false)
+                                    .setServerClientId("222042395227-54o8lsf3g2ciaic3k7hl1aisjkvfvg6j.apps.googleusercontent.com")
+                                    .setAutoSelectEnabled(true)
+                                    .build()
+                                val request = GetCredentialRequest.Builder()
+                                    .addCredentialOption(googleIdOption)
+                                    .build()
+                                val result = credentialManager.getCredential(ctx, request)
+                                val credential = result.credential
+                                if (credential is androidx.credentials.CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                    viewModel.loginWithGoogle(googleIdTokenCredential.idToken)
+                                }
+                            } catch (e: Exception) {
+                                viewModel.sendNotification("Error", e.localizedMessage ?: "Google Sign-In failed")
+                            }
+                        }
+                    },
                     onNavigateToSignup = { isLoginScreen = false }
                 )
             } else {
@@ -202,7 +233,7 @@ fun AppRouter(viewModel: LoyaltyViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun LoginScreen(onLogin: (String, String) -> Unit, onNavigateToSignup: () -> Unit) {
+fun LoginScreen(onLogin: (String, String) -> Unit, onGoogleSignInClick: () -> Unit = {}, onNavigateToSignup: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -260,6 +291,14 @@ fun LoginScreen(onLogin: (String, String) -> Unit, onNavigateToSignup: () -> Uni
             colors = ButtonDefaults.buttonColors(containerColor = com.example.ui.theme.PrimaryGreen)
         ) {
             Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedButton(
+            onClick = onGoogleSignInClick,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.DarkGray)
+        ) {
+            Text("Sign in with Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(modifier = Modifier.height(16.dp))
         TextButton(onClick = onNavigateToSignup) {

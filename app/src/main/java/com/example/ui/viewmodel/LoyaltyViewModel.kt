@@ -3,8 +3,6 @@ package com.example.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.Room
-import com.example.data.local.LoyaltyDatabase
 import com.example.data.model.*
 import com.example.data.repository.LoyaltyRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -19,18 +17,14 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.auth.FirebaseAuth
 import android.os.Bundle
 
 class LoyaltyViewModel(application: Application) : AndroidViewModel(application) {
     private val analytics = FirebaseAnalytics.getInstance(application)
     
-    private val db = Room.databaseBuilder(
-        application,
-        LoyaltyDatabase::class.java,
-        "loyalty_db"
-    ).fallbackToDestructiveMigration().build()
-    
-    val repository = LoyaltyRepository(db.loyaltyDao())
+    val repository = LoyaltyRepository()
+    private val auth = FirebaseAuth.getInstance()
     private val _currentUserEmail = MutableStateFlow<String?>(null)
     
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -62,40 +56,40 @@ class LoyaltyViewModel(application: Application) : AndroidViewModel(application)
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
-    
-    val customers = repository.getAllCustomers().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
-    
+
     val pointSettings = repository.pointSettings.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = null
     )
-
-    val allUsers = repository.allUsers.stateIn(
+    
+    val categories = repository.categories.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Lazily,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
     
-    val auditLogs = repository.auditLogs
-    val categories = repository.categories.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun addCategory(name: String) {
-        viewModelScope.launch { repository.insertCategory(name) }
-    }
-    fun deleteCategory(category: com.example.data.model.Category) {
-        viewModelScope.launch { repository.deleteCategory(category) }
-    }
-    fun deleteOffer(offer: com.example.data.model.Offer) {
-        viewModelScope.launch { repository.deleteOffer(offer) }
-    }
-    val allTransactions = repository.getAllTransactions().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()).stateIn(
+    val allUsers = repository.allUsers.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Lazily,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+    
+    val allCustomers = repository.getAllCustomers().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val allTransactions = repository.getAllTransactions().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+    
+    val auditLogs = repository.auditLogs.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
@@ -106,46 +100,92 @@ class LoyaltyViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.initializeDb()
         }
-    }
-    
-    fun login(email: String, pass: String) {
-        viewModelScope.launch {
-            val user = repository.getUserSync(email)
-            if (user != null && user.passwordHash == pass) {
-                _currentUserEmail.value = email
-                _notifications.emit(Pair("Success", "Logged in as ${user.name}"))
-            } else {
-                _notifications.emit(Pair("Error", "Invalid email or password"))
-            }
+        auth.addAuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            _currentUserEmail.value = user?.email
         }
     }
-    
-    fun signup(emailOrPhone: String, phoneOptional: String, name: String) {
-        viewModelScope.launch {
-            val identifier = if (emailOrPhone.isBlank()) phoneOptional else emailOrPhone
-            if (identifier.isBlank()) {
-                _notifications.emit(Pair("Error", "Email or Phone required"))
-                return@launch
-            }
-            if (repository.getUserSync(identifier) == null) {
-                val customerCount = repository.getCustomerCount()
-                val customerNumber = customerCount + 1
-                val defaultPassword = "customer2026${String.format("%02d", customerNumber)}"
 
-                repository.createUser(User(
-                    email = identifier,
-                    passwordHash = defaultPassword,
-                    name = name,
-                    role = Role.CUSTOMER,
-                    phone = phoneOptional,
-                    points = 5 // Bonus 5 points upon signup!
-                ))
-                _currentUserEmail.value = identifier
-                _notifications.emit(Pair("Success", "Account created! 5 bonus points awarded. Your password is $defaultPassword"))
-            } else {
-                _notifications.emit(Pair("Error", "Account already exists"))
+    fun loginWithGoogle(idToken: String) {
+        val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+        auth.signInWithCredential(credential)
+            .addOnSuccessListener { authResult ->
+                viewModelScope.launch {
+                    val email = authResult.user?.email ?: return@launch
+                    val name = authResult.user?.displayName ?: email.substringBefore("@")
+                    val user = repository.getUserSync(email)
+                    if (user != null) {
+                        _notifications.emit(Pair("Success", "Logged in as ${user.name}"))
+                    } else {
+                        repository.createUser(User(
+                            email = email,
+                            name = name,
+                            role = Role.CUSTOMER,
+                            points = 5
+                        ))
+                        _notifications.emit(Pair("Success", "Account created! 5 bonus points awarded."))
+                    }
+                }
             }
+            .addOnFailureListener {
+                viewModelScope.launch { _notifications.emit(Pair("Error", it.localizedMessage ?: "Google Sign-In failed")) }
+            }
+    }
+
+    fun login(email: String, pass: String) {
+        if (email.isBlank() || pass.isBlank()) {
+            viewModelScope.launch { _notifications.emit(Pair("Error", "Email and Password required")) }
+            return
         }
+        auth.signInWithEmailAndPassword(email, pass)
+            .addOnSuccessListener {
+                viewModelScope.launch {
+                    val user = repository.getUserSync(email)
+                    if (user != null) {
+                        _notifications.emit(Pair("Success", "Logged in as ${user.name}"))
+                    } else {
+                        // User has firebase auth but no firestore document
+                        repository.createUser(User(
+                            email = email,
+                            name = email.substringBefore("@"),
+                            role = Role.CUSTOMER
+                        ))
+                    }
+                }
+            }
+            .addOnFailureListener {
+                viewModelScope.launch { _notifications.emit(Pair("Error", it.localizedMessage ?: "Login failed")) }
+            }
+    }
+
+    fun signup(emailOrPhone: String, phoneOptional: String, name: String) {
+        val identifier = if (emailOrPhone.isBlank()) phoneOptional else emailOrPhone
+        if (identifier.isBlank()) {
+            viewModelScope.launch { _notifications.emit(Pair("Error", "Email or Phone required")) }
+            return
+        }
+        
+        // For simplicity, we assume identifier is an email for Firebase Auth.
+        // If it's a phone, in a real app we'd use phone auth or generate a dummy email.
+        val defaultPassword = "password" // Or generate one
+        
+        auth.createUserWithEmailAndPassword(identifier, defaultPassword)
+            .addOnSuccessListener {
+                viewModelScope.launch {
+                    repository.createUser(User(
+                        email = identifier,
+                        passwordHash = defaultPassword,
+                        name = name,
+                        role = Role.CUSTOMER,
+                        phone = phoneOptional,
+                        points = 5 // Bonus 5 points upon signup!
+                    ))
+                    _notifications.emit(Pair("Success", "Account created! 5 bonus points awarded. Your password is $defaultPassword"))
+                }
+            }
+            .addOnFailureListener {
+                viewModelScope.launch { _notifications.emit(Pair("Error", it.localizedMessage ?: "Signup failed")) }
+            }
     }
 
     fun changeUserPassword(email: String, newPass: String) {
@@ -176,9 +216,9 @@ class LoyaltyViewModel(application: Application) : AndroidViewModel(application)
         }
         analytics.logEvent(FirebaseAnalytics.Event.SPEND_VIRTUAL_CURRENCY, bundle)
     }
-    
+
     fun logout() {
-        _currentUserEmail.value = null
+        auth.signOut()
     }
 
     fun addStampTo(email: String) {
@@ -201,6 +241,24 @@ class LoyaltyViewModel(application: Application) : AndroidViewModel(application)
             repository.logAudit("Added $pointsEarned points to $customerEmail (Cashier: $currentCashierEmail)", currentCashierEmail)
             
             _notifications.emit(Pair("Purchase Processed", "Added $pointsEarned points to $customerEmail."))
+        }
+    }
+
+    fun addCategory(name: String) {
+        viewModelScope.launch {
+            repository.insertCategory(name)
+        }
+    }
+
+    fun deleteCategory(category: Category) {
+        viewModelScope.launch {
+            repository.deleteCategory(category)
+        }
+    }
+
+    fun deleteOffer(offer: Offer) {
+        viewModelScope.launch {
+            repository.deleteOffer(offer)
         }
     }
 
@@ -232,7 +290,7 @@ class LoyaltyViewModel(application: Application) : AndroidViewModel(application)
             _notifications.emit(Pair("Reward Redeemed!", "You successfully redeemed: ${reward.title}"))
         }
     }
-    
+
     fun redeemPointsCashier(email: String, points: Int) {
         viewModelScope.launch {
             val currentCashierEmail = _currentUserEmail.value ?: "unknown_cashier"
@@ -247,7 +305,7 @@ class LoyaltyViewModel(application: Application) : AndroidViewModel(application)
             _notifications.emit(Pair("Success", "Redeemed $points points for $email"))
         }
     }
-    
+
     fun updateSettings(pointsPerDollar: Int, discountRate: Double, redemptionThreshold: Int, adminWriteEnabled: Boolean) {
         viewModelScope.launch {
             repository.updateSettings(PointSettings(
@@ -278,27 +336,29 @@ class LoyaltyViewModel(application: Application) : AndroidViewModel(application)
     fun searchUsers(query: String): kotlinx.coroutines.flow.Flow<List<com.example.data.model.User>> { 
         return repository.searchUsers(query)
     }
-
+    
     fun getUserFlow(email: String): kotlinx.coroutines.flow.Flow<com.example.data.model.User?> { 
         return repository.getUser(email) 
     }
 
     fun createCashier(email: String, name: String, pass: String) {
-        viewModelScope.launch {
-            if (repository.getUserSync(email) == null) {
-                repository.createUser(User(
-                    email = email,
-                    passwordHash = pass,
-                    name = name,
-                    role = Role.CASHIER
-                ))
-                _notifications.emit(Pair("Success", "Cashier $name created."))
-                val currentAdminEmail = _currentUserEmail.value ?: "system"
-                repository.logAudit("Created cashier $email", currentAdminEmail)
-            } else {
-                _notifications.emit(Pair("Error", "User with email already exists."))
+        auth.createUserWithEmailAndPassword(email, pass)
+            .addOnSuccessListener {
+                viewModelScope.launch {
+                    repository.createUser(User(
+                        email = email,
+                        passwordHash = pass,
+                        name = name,
+                        role = Role.CASHIER
+                    ))
+                    _notifications.emit(Pair("Success", "Cashier $name created."))
+                    val currentAdminEmail = _currentUserEmail.value ?: "system"
+                    repository.logAudit("Created cashier $email", currentAdminEmail)
+                }
             }
-        }
+            .addOnFailureListener {
+                viewModelScope.launch { _notifications.emit(Pair("Error", it.localizedMessage ?: "Failed to create cashier")) }
+            }
     }
 
     fun sendNotification(title: String, message: String) {

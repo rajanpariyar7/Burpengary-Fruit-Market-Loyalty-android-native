@@ -584,7 +584,7 @@ fun AdminTransactionsTab(viewModel: LoyaltyViewModel) {
 
 @Composable
 fun AdminStatsDashboardTab(viewModel: LoyaltyViewModel) {
-    val customers by viewModel.customers.collectAsStateWithLifecycle()
+    val customers by viewModel.allCustomers.collectAsStateWithLifecycle()
     val transactions by viewModel.allTransactions.collectAsStateWithLifecycle()
     val offers by viewModel.offers.collectAsStateWithLifecycle()
 
@@ -641,7 +641,7 @@ fun AdminStatsDashboardTab(viewModel: LoyaltyViewModel) {
 @Composable
 fun AdminCustomersTab(viewModel: LoyaltyViewModel) {
     var searchQuery by remember { mutableStateOf("") }
-    val allCustomers by viewModel.customers.collectAsStateWithLifecycle()
+    val allCustomers by viewModel.allCustomers.collectAsStateWithLifecycle()
     
     val filteredCustomers = if (searchQuery.isBlank()) {
         allCustomers

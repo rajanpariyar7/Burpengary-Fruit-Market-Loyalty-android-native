@@ -17,8 +17,8 @@ android {
     applicationId = "com.burpengaryfruitmarket.loyalty"
     minSdk = 24
     targetSdk = 36
-    versionCode = 10
-    versionName = "10.0"
+    versionCode = 14
+    versionName = "14.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -62,6 +62,10 @@ android {
     includeInApk = false
     includeInBundle = true
   }
+  packaging { 
+    resources { excludes += "META-INF/LICENSE.md" }
+    jniLibs { useLegacyPackaging = true }
+  }
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -97,24 +101,24 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   // implementation(libs.androidx.navigation.compose)
-  implementation(libs.androidx.room.ktx)
-  implementation(libs.androidx.room.runtime)
+  // implementation(libs.androidx.room.ktx)
+  // implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
   implementation("com.google.zxing:core:3.5.2")
-  implementation("com.google.mlkit:barcode-scanning:17.2.0")
+  implementation("com.google.mlkit:barcode-scanning:17.3.0")
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
   implementation(libs.firebase.messaging)
   implementation("com.google.firebase:firebase-analytics")
   // Uncomment to use Firestore:
-  // implementation(libs.firebase.firestore)
+  implementation(libs.firebase.firestore)
 
   // Uncomment ALL FOUR of the following dependencies together to use Firebase Auth and Google
   // Sign-In via Credential Manager:
-  // implementation(libs.firebase.auth)
-  // implementation(libs.androidx.credentials)
-  // implementation(libs.androidx.credentials.play.services)
-  // implementation(libs.googleid)
+  implementation(libs.firebase.auth)
+  implementation(libs.androidx.credentials)
+  implementation(libs.androidx.credentials.play.services)
+  implementation(libs.googleid)
   implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
@@ -139,6 +143,6 @@ dependencies {
   androidTestImplementation(libs.androidx.runner)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
-  "ksp"(libs.androidx.room.compiler)
+  // "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
